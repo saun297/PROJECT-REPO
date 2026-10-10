@@ -1,0 +1,15 @@
+# 1. Môi trường ảo (Bắt buộc chặn vì quá nặng và không cần thiết)
+venv/
+.venv/
+env/
+
+# 2. Bộ nhớ đệm Python & Jupyter Notebook (File rác tự sinh khi chạy code)
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+
+# 3. Cấu hình phần mềm soạn thảo & Hệ điều hành
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
