@@ -22,44 +22,31 @@ olist-customer-segmentation/
 ├── run_pipeline.py
 │
 ├── data/
-│   ├── raw/
-│   │   ├── olist_customers_dataset.csv
-│   │   ├── olist_orders_dataset.csv
-│   │   └── olist_order_payments_dataset.csv
-│   │   └── olist_order_items_dataset.csv 
-│   │   └── olist_order_reviews_dataset.csv 
-│   │   └── olist_products_dataset.csv 
-│   │   └── product_category_name_translation.csv 
-│   │   └── olist_joined_dataset.csv 
-│   ├── processed/                                
-│   │   └── .gitkeep
-│
+│   ├── joined_data/
+│   ├── processed/
+│   └── raw_data/
+├── models/
+│   ├── fcm_rfm_model.pkl
+│   ├── kmeans_rfm_model.pkl
+│   └── kmedoids_rfm_model.pkl
 ├── notebooks/
 │   ├── 01_data_understanding.ipynb
 │   ├── 02_rfm_eda.ipynb
 │   ├── 03_clustering_experiments.ipynb
-│   └── 04_cluster_interpretation.ipynb     
-│
-├── src/
-│   ├── __init__.py      
-│   ├── config.py                 
-│   ├── olist_joined_dataset.py      
-│   ├── data_loader.py
-│   ├── preprocessing.py
-│   ├── rfm.py
-│   ├── visualization.py
-│   ├── clustering.py
-│   ├── evaluation.py
-│
-├── models/
-│   └── .gitkeep 
-│
+│   ├── 04_cluster_interpretation.ipynb
+│   └── 05_ab_testing_preparation.ipynb
 ├── reports/
-      ├── figures/
-      │       └── .gitkeep  
-      ├── tables/
-      │      └── .gitkeep 
-      └── final_report.docx
+│   ├── figures/
+│   └── tables/
+│   └── final_report/
+└── src/
+    ├── __init__.py 
+    ├── clustering.py
+    ├── config.py
+    ├── olist_joined_dataset.py
+    ├── preprocessing.py
+    ├── rfm.py
+    └── visualization.py
 ```
 ## Thông tin tác giả
 
