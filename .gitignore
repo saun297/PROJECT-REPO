@@ -1,15 +1,28 @@
-# 1. Môi trường ảo (Bắt buộc chặn vì quá nặng và không cần thiết)
-venv/
-.venv/
-env/
-
-# 2. Bộ nhớ đệm Python & Jupyter Notebook (File rác tự sinh khi chạy code)
+# Byte-compiled / Python internal
 __pycache__/
 *.py[cod]
-.ipynb_checkpoints/
+*$py.class
+.pytest_cache/
 
-# 3. Cấu hình phần mềm soạn thảo & Hệ điều hành
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints
+
+# Environments
+venv/
+env/
+.env
+
+# Data & Large Files (không push data nặng lên Git)
+data/raw_data/*
+data/processed/*
+data/joined_data/*
+!data/**/.gitkeep
+
+# Models (nếu file .pkl quá lớn, nên ignore)
+models/*.pkl
+!models/.gitkeep
+
+# IDE & System Files
 .vscode/
 .idea/
 .DS_Store
-Thumbs.db

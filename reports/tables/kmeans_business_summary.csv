@@ -1,0 +1,5 @@
+Cluster,Recency_log_scaled,Frequency_log_scaled,Monetary_log_scaled,freight_value,review_score,customer_state,customer_city,category
+0,0.34,-0.18,0.92,31.6,4.04,SP,sao paulo,bed_bath_table
+1,-1.71,-0.18,-0.1,22.84,4.32,SP,sao paulo,health_beauty
+2,-0.08,5.69,0.92,22.89,4.21,SP,sao paulo,bed_bath_table
+3,0.42,-0.18,-0.73,15.95,4.17,SP,sao paulo,bed_bath_table
