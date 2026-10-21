@@ -1,0 +1,25 @@
+# ============================================================
+# OLIST Customer Segmentation - Dependencies
+# ============================================================
+# Cài đặt: pip install -r requirements.txt
+# Python >= 3.9 được khuyến nghị
+# ============================================================
+
+# --- Xử lý & Phân tích dữ liệu ---
+pandas>=2.0.0
+numpy>=1.24.0
+
+# --- Machine Learning & Clustering ---
+scikit-learn>=1.2.0        # K-Means, StandardScaler, PCA
+scipy>=1.10.0              # cdist (dùng trong K-Medoids)
+
+# --- Trực quan hóa ---
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# --- Lưu & Tải mô hình ---
+joblib>=1.3.0              # Lưu/load file .pkl
+
+# --- Jupyter Notebook ---
+notebook>=7.0.0
+ipykernel>=6.0.0
