@@ -1,27 +1,55 @@
 from pathlib import Path
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import seaborn as sns
 from sklearn.preprocessing import StandardScaler
 
 
 class RFMProcessor:
-    """Class tính toán và tiền xử lý đặc trưng RFM cho khách hàng."""
+    """Lớp tính toán và xử lý tiền dữ liệu RFM:
 
-    def __init__(self, df_clean: pd.DataFrame):
-        self.df_clean = df_clean
-        self.rfm_df = None
-        self.df_final = None
+    Tính RFM thô -> Capping -> Log Transform -> Scaling -> Trực quan hóa & Lưu.
+    """
+
+    def __init__(
+        self,
+        df_clean: pd.DataFrame,
+        features: list = None,
+        monetary_quantile: float = 0.99,
+        output_dir: str = "reports/figures",
+    ):
+        """Khởi tạo RFMProcessor với DataFrame sạch và các cấu hình."""
+        self.df_clean = df_clean.copy()
+        self.features = features if features is not None else ["Recency", "Frequency", "Monetary"]
+        self.monetary_quantile = monetary_quantile
+        self.output_dir = Path(output_dir)
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+
+        # Lưu trữ các dữ liệu sau từng bước
+        self.rfm_df = None       # RFM thô
+        self.monetary_upper = None
+        self.df_capped = None   # Sau Capping
+        self.df_logged = None   # Sau Log Transform
+        self.df_final = None    # Sau Scaling
+
+        # Scaler
+        self.scaler = StandardScaler()
+
+    def _save_show(self, fig: plt.Figure, filename: str) -> None:
+        """Hàm trợ lý để lưu và hiển thị biểu đồ."""
+        save_path = self.output_dir / filename
+        fig.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"Đã lưu biểu đồ tại: {save_path.resolve()}")
+        plt.show()
+        plt.close(fig)
 
     def compute_rfm(self) -> pd.DataFrame:
         """Tổng hợp dữ liệu thành 1 dòng / 1 customer_unique_id (tính R, F, M thô)."""
-        snapshot_date = self.df_clean[
-            "order_purchase_timestamp"
-        ].max() + pd.Timedelta(days=1)
+        snapshot_date = self.df_clean["order_purchase_timestamp"].max() + pd.Timedelta(days=1)
 
         orders = (
-            self.df_clean.groupby(
-                ["customer_unique_id", "order_id"], as_index=False
-            )
+            self.df_clean.groupby(["customer_unique_id", "order_id"], as_index=False)
             .agg(
                 payment_value=("payment_value", "sum"),
                 order_date=("order_purchase_timestamp", "first"),
@@ -37,67 +65,187 @@ class RFMProcessor:
             }
         ).reset_index()
 
-        print(f" Đã tính RFM thô cho {len(self.rfm_df):,} khách hàng duy nhất.")
+        print(f"Đã tính RFM thô cho {len(self.rfm_df):,} khách hàng duy nhất.")
         return self.rfm_df
 
-    def handle_rfm_outliers_capping(
-        self,
-        df: pd.DataFrame,
-        columns=["Recency", "Frequency", "Monetary"],
-        lower_quantile=0.01,
-        upper_quantile=0.99,
-    ) -> pd.DataFrame:
-        """Xử lý ngoại lai bằng phương pháp Capping (Winsorization)."""
-        df_capped = df.copy()
-
-        for col in columns:
-            lower_bound = df_capped[col].quantile(lower_quantile)
-            upper_bound = df_capped[col].quantile(upper_quantile)
-            df_capped[col] = np.clip(df_capped[col], lower_bound, upper_bound)
-
-        print(f"[OK] Đã xử lý ngoại lai bằng Capping ({lower_quantile*100}% - {upper_quantile*100}%).")
-        return df_capped
-
-    def preprocess_features(
-        self, feature_cols=["Recency", "Frequency", "Monetary"], upper_quantile=0.99
-    ) -> pd.DataFrame:
-        """Thực hiện chuỗi tiền xử lý: Capping Outliers -> Log Transform -> Scaling."""
+    def cap_monetary(self, plot: bool = True) -> pd.DataFrame:
+        """Bước 1: Chặn trần (Capping) giá trị Monetary theo phân vị (Quantile)."""
         if self.rfm_df is None:
             self.compute_rfm()
 
-        print("\n" + "=" * 70)
-        print("GIAI ĐOẠN TIỀN XỬ LÝ ĐẶC TRƯNG (FEATURE PREPROCESSING)")
-        print("=" * 70)
+        self.df_capped = self.rfm_df.copy()
+        self.monetary_upper = self.df_capped["Monetary"].quantile(self.monetary_quantile)
+        self.df_capped["Monetary"] = self.df_capped["Monetary"].clip(upper=self.monetary_upper)
 
-        # Bước 1: Xử lý ngoại lai bằng Capping
-        df_processed = self.handle_rfm_outliers_capping(
-            self.rfm_df, columns=feature_cols, upper_quantile=upper_quantile
+        changed = self.rfm_df["Monetary"] > self.monetary_upper
+        print(f"Ngưỡng P{int(self.monetary_quantile * 100)} của Monetary: {self.monetary_upper:,.2f}")
+        print(f"Số khách hàng bị chặn trần: {changed.sum():,}")
+        print(f"Tỷ lệ bị chặn trần: {changed.mean():.2%}")
+
+        if plot:
+            self.plot_capping()
+
+        return self.df_capped
+
+    def plot_capping(self) -> None:
+        """Vẽ và lưu biểu đồ so sánh trước và sau Capping."""
+        if self.df_capped is None:
+            raise ValueError("Vui lòng thực hiện `.cap_monetary()` trước khi vẽ biểu đồ!")
+
+        fig, axes = plt.subplots(1, 2, figsize=(13, 5), sharex=True, sharey=True)
+
+        plots = [
+            (axes[0], self.rfm_df["Monetary"], "Trước capping", "skyblue"),
+            (axes[1], self.df_capped["Monetary"], f"Sau capping P{int(self.monetary_quantile * 100)}", "sandybrown"),
+        ]
+
+        for ax, values, title, color in plots:
+            sns.boxplot(y=values, color=color, ax=ax)
+            ax.set_title(title)
+            ax.set_ylabel("Monetary")
+            ax.axhline(
+                self.monetary_upper,
+                color="red",
+                linestyle="--",
+                linewidth=1,
+                label=f"P99 = {self.monetary_upper:,.2f}",
+            )
+            ax.legend()
+
+        fig.suptitle("Monetary trước và sau capping", fontsize=15, fontweight="bold")
+        fig.tight_layout()
+
+        self._save_show(fig, "01_monetary_boxplot_capping.png")
+
+    def log_transform(self, plot: bool = True) -> pd.DataFrame:
+        """Bước 2: Biến đổi Log cho các đặc trưng Frequency (log1p) và Monetary (log)."""
+        if self.df_capped is None:
+            self.cap_monetary(plot=False)
+
+        self.df_logged = self.df_capped.copy()
+        self.df_logged["Frequency"] = np.log1p(self.df_capped["Frequency"])
+        self.df_logged["Monetary"] = np.log(self.df_capped["Monetary"])
+
+        print("Đã biến đổi Frequency bằng log1p(F).")
+        print("Đã biến đổi Monetary bằng log(M).")
+
+        if plot:
+            self.plot_log_transform()
+
+        return self.df_logged
+
+    def plot_log_transform(self) -> None:
+        """Vẽ và lưu biểu đồ so sánh trước và sau Log Transformation."""
+        if self.df_logged is None:
+            raise ValueError("Vui lòng thực hiện `.log_transform()` trước khi vẽ biểu đồ!")
+
+        log_features = ["Frequency", "Monetary"]
+        fig, axes = plt.subplots(2, 2, figsize=(14, 9))
+
+        for j, col in enumerate(log_features):
+            rows_config = [
+                (0, self.df_capped, "Trước log", "skyblue"),
+                (1, self.df_logged, "Sau log", "sandybrown"),
+            ]
+
+            for row, table, label, color in rows_config:
+                values = table[col]
+                ax = axes[row, j]
+
+                sns.histplot(
+                    x=values,
+                    discrete=(True if (col == "Frequency" and row == 0) else False),
+                    bins=40,
+                    color=color,
+                    ax=ax,
+                )
+
+                ax.set_title(f"{col} — {label}\nĐộ lệch = {values.skew():.3f}")
+                ax.set_ylabel("Số khách hàng")
+
+                if row == 0:
+                    ax.set_xlabel(col)
+                elif col == "Frequency":
+                    ax.set_xlabel("log1p(Frequency)")
+                else:
+                    ax.set_xlabel("log(Monetary)")
+
+            ymax = max(axes[0, j].get_ylim()[1], axes[1, j].get_ylim()[1])
+            axes[0, j].set_ylim(0, ymax)
+            axes[1, j].set_ylim(0, ymax)
+
+        fig.suptitle("Frequency và Monetary trước và sau log transformation", fontsize=15, fontweight="bold")
+        fig.tight_layout(rect=[0, 0, 1, 0.94])
+
+        self._save_show(fig, "02_frequency_monetary_histogram_log.png")
+
+    def scale_features(self, plot: bool = True) -> pd.DataFrame:
+        """Bước 3: Chuẩn hóa dữ liệu bằng StandardScaler."""
+        if self.df_logged is None:
+            self.log_transform(plot=False)
+
+        scaled_array = self.scaler.fit_transform(self.df_logged[self.features])
+
+        # Giữ lại customer_unique_id trong DataFrame kết quả
+        self.df_final = pd.DataFrame(
+            scaled_array,
+            columns=self.features,
+            index=self.df_logged.index,
         )
+        if "customer_unique_id" in self.df_logged.columns:
+            self.df_final.insert(0, "customer_unique_id", self.df_logged["customer_unique_id"])
 
-        print("\nĐộ lệch (Skewness) trước khi Log Transformation (đã cap):")
-        print(df_processed[feature_cols].skew())
+        print(f"Đã chuẩn hóa toàn bộ {len(self.df_final):,} khách hàng với {len(self.features)} đặc trưng.")
 
-        # Bước 2: Log Transformation
-        for col in feature_cols:
-            df_processed[f"{col}_log"] = np.log1p(df_processed[col])
+        if plot:
+            self.plot_scaling()
 
-        # Bước 3: Chuẩn hóa đặc trưng (StandardScaler)
-        scaled_cols = [f"{col}_log" for col in feature_cols]
-        scaler = StandardScaler()
-        scaled_data = scaler.fit_transform(df_processed[scaled_cols])
+        return self.df_final
 
-        df_scaled = pd.DataFrame(
-            scaled_data, columns=[f"{col}_scaled" for col in scaled_cols]
-        )
-        self.df_final = pd.concat(
-            [
-                df_processed[["customer_unique_id"]].reset_index(drop=True),
-                df_scaled,
-            ],
-            axis=1,
-        )
+    def plot_scaling(self) -> None:
+        """Vẽ và lưu biểu đồ so sánh trước và sau StandardScaler."""
+        if self.df_final is None:
+            raise ValueError("Vui lòng thực hiện `.scale_features()` trước khi vẽ biểu đồ!")
 
-        print("\n[OK] Đã hoàn tất xử lý Capping -> Log Transform -> StandardScaler.")
+        fig, axes = plt.subplots(2, 3, figsize=(18, 9))
+
+        for j, col in enumerate(self.features):
+            rows_config = [
+                (0, self.df_logged, "Trước chuẩn hóa", "skyblue"),
+                (1, self.df_final, "Sau chuẩn hóa", "sandybrown"),
+            ]
+
+            for row, table, label, color in rows_config:
+                ax = axes[row, j]
+
+                sns.histplot(x=table[col], bins=40, color=color, ax=ax)
+                ax.set_title(f"{col} — {label}")
+                ax.set_ylabel("Số khách hàng")
+
+                if row == 1:
+                    ax.set_xlabel(f"{col} đã chuẩn hóa")
+                elif col == "Frequency":
+                    ax.set_xlabel("log1p(Frequency)")
+                elif col == "Monetary":
+                    ax.set_xlabel("log(Monetary)")
+                else:
+                    ax.set_xlabel("Recency")
+
+            ymax = max(axes[0, j].get_ylim()[1], axes[1, j].get_ylim()[1])
+            axes[0, j].set_ylim(0, ymax)
+            axes[1, j].set_ylim(0, ymax)
+
+        fig.suptitle("R, F, M trước và sau StandardScaler", fontsize=15, fontweight="bold")
+        fig.tight_layout(rect=[0, 0, 1, 0.94])
+
+        self._save_show(fig, "03_rfm_histogram_standardscaler.png")
+
+    def preprocess_features(self, plot: bool = True) -> pd.DataFrame:
+        """Hàm pipeline chạy toàn bộ từ tính RFM thô -> Capping -> Log -> Scaling."""
+        self.compute_rfm()
+        self.cap_monetary(plot=plot)
+        self.log_transform(plot=plot)
+        self.scale_features(plot=plot)
         return self.df_final
 
     def save_processed_data(
@@ -105,7 +253,7 @@ class RFMProcessor:
         output_dir: str = "data/processed",
         output_filename: str = "rfm_features_scaled.csv",
     ) -> None:
-        """Hàm lưu bảng RFM đã xử lý vào thư mục data/processed/."""
+        """Hàm lưu bảng RFM đã xử lý vào thư mục được chỉ định."""
         if self.df_final is None:
             raise ValueError(
                 "Vui lòng chạy hàm `.preprocess_features()` trước khi lưu dữ liệu!"
@@ -117,27 +265,3 @@ class RFMProcessor:
         out_processed_path = out_path / output_filename
         self.df_final.to_csv(out_processed_path, index=False, encoding="utf-8-sig")
         print(f"Đã lưu bộ dữ liệu RFM scaled tại: {out_processed_path.resolve()}")
-
-
-# if __name__ == "__main__":
-#     # Ví dụ khi chạy trực tiếp file rfm.py từ Terminal
-#     cleaned_data_path = Path("data/processed/olist_cleaned_dataset.csv")
-
-#     if cleaned_data_path.exists():
-#         print(f"Đang đọc dữ liệu đã làm sạch từ: {cleaned_data_path.resolve()}")
-#         df_clean = pd.read_csv(cleaned_data_path)
-
-#         # Chuyển kiểu timestamp về dạng datetime
-#         df_clean["order_purchase_timestamp"] = pd.to_datetime(
-#             df_clean["order_purchase_timestamp"]
-#         )
-
-#         # Thực thi RFM Pipeline
-#         rfm_processor = RFMProcessor(df_clean)
-#         rfm_processor.compute_rfm()
-#         rfm_processor.preprocess_features()
-#         rfm_processor.save_processed_data()
-#     else:
-#         print(
-#             f" Không tìm thấy file {cleaned_data_path}. Vui lòng chạy preprocessing.py trước."
-#         )
