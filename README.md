@@ -112,56 +112,40 @@ Sau đó truy cập vào thư mục `notebooks/` và chạy lần lượt 5 note
 ```text
 PROJECT-REPO-main/
 │
-├── README.md                           # Tài liệu tổng quan và hướng dẫn sử dụng
-├── requirements.txt                    # Danh sách thư viện Python cần cài đặt
-├── run_pipeline.py                     # Pipeline chạy tự động toàn diện qua CLI
-├── .gitignore                          # Cấu hình bỏ qua các file tạm, cache, venv
+├── README.md                         
+├── requirements.txt                   
+├── run_pipeline.py                     
+├── .gitignore                         
 │
-├── data/                               # Thư mục lưu trữ dữ liệu các giai đoạn
-│   ├── raw_data/                       # 7 file CSV dữ liệu thô ban đầu từ Olist
-│   ├── joined_data/                    # Chứa olist_joined_dataset.csv (dữ liệu gộp sau bước 1)
-│   └── processed/                      # Chứa các file dữ liệu đã xử lý và nhãn cụm:
-│       ├── olist_cleaned_dataset.csv       # Dữ liệu sau làm sạch (loại đơn hủy, null...)
-│       ├── rfm_raw.csv                     # Bảng chỉ số RFM thô cấp độ khách hàng
-│       ├── rfm_features_scaled.csv         # Bảng RFM sau khi Log transform + StandardScaler
-│       ├── rfm_kmeans_clustered.csv        # Dữ liệu kèm nhãn phân cụm K-Means
-│       ├── rfm_kmedoids_clustered.csv      # Dữ liệu kèm nhãn phân cụm K-Medoids
-│       ├── rfm_fcm_clustered.csv           # Dữ liệu kèm nhãn và ma trận xác suất FCM
-│       ├── rfm_kmeans_merged_detail.csv    # Dữ liệu chi tiết phục vụ báo cáo & trực quan hóa
-│       ├── danh_sach_AB_Testing_chuan.csv  # Danh sách khách hàng vùng ranh giới phân vân
-│       └── danh_sach_AB_Testing_chia_nhom.csv # Danh sách chia nhóm 50/50 Control vs Treatment
+├── data/                            
+│   ├── raw_data/                     
+│   ├── joined_data/                   
+│   └── processed/                      
 │
-├── models/                             # Thư mục lưu các mô hình đã huấn luyện (.pkl)
-│   ├── kmeans_rfm_model.pkl            # Mô hình K-Means đã huấn luyện
-│   ├── kmedoids_rfm_model.pkl          # Mô hình K-Medoids (medoids, indices, parameters)
-│   └── fcm_rfm_model.pkl               # Mô hình Fuzzy C-Means
+├── models/                           
+│   ├── kmeans_rfm_model.pkl           
+│   ├── kmedoids_rfm_model.pkl        
+│   └── fcm_rfm_model.pkl              
 │
-├── notebooks/                          # 5 Jupyter Notebooks nghiên cứu & thực nghiệm
-│   ├── 01_data_understanding.ipynb     # Bước tìm hiểu dữ liệu và tiền xử lý ghép bảng
-│   ├── 02_rfm_eda.ipynb                # Phân tích khám phá đặc trưng RFM
-│   ├── 03_clustering_experiments.ipynb # Thử nghiệm phân cụm, đánh giá K và so sánh mô hình
-│   ├── 04_cluster_interpretation.ipynb # Diễn giải cụm, chân dung khách hàng & Business Insights
-│   └── 05_ab_testing_preparation.ipynb # Xây dựng tập thử nghiệm A/B Testing từ ma trận FCM
+├── notebooks/                         
+│   ├── 01_data_understanding.ipynb    
+│   ├── 02_rfm_eda.ipynb               
+│   ├── 03_clustering_experiments.ipynb
+│   ├── 04_cluster_interpretation.ipynb
+│   └── 05_ab_testing_preparation.ipynb 
 │
-├── reports/                            # Thư mục chứa các kết quả đầu ra tự động
-│   ├── figures/                        # Chứa toàn bộ hình ảnh biểu đồ xuất ra:
-│   │   ├── rfm_overview.png                # Bộ 4 biểu đồ: PCA 2D, Snake Plot, Heatmap, Boxplot
-│   │   ├── business_insights.png           # Radar Chart đa chiều & Phân bố bang địa lý
-│   │   ├── top_categories.png              # Top 3 ngành hàng tiêu biểu theo từng cụm
-│   │   └── ...                             # Các đồ thị đánh giá K tối ưu, tương quan, phân phối
-│   └── tables/                         # Các bảng số liệu báo cáo tóm tắt:
-│       ├── kmeans_rfm_summary.csv          # Tóm tắt trung bình RFM và tỷ lệ từng cụm
-│       ├── kmeans_business_summary.csv     # Tóm tắt chỉ số kinh doanh (freight, review, bang, ngành hàng)
-│       └── model_benchmark_comparison.csv  # Bảng so sánh Silhouette, Davies-Bouldin, thời gian chạy
+├── reports/                            
+│   ├── figures/                        
+│   └── tables/                        
 │
-└── src/                                # Toàn bộ mã nguồn cốt lõi (Module hóa chuẩn Clean Code)
-    ├── __init__.py                     # Định danh package Python
-    ├── config.py                       # Thiết lập cấu hình và quản lý đường dẫn tập trung
-    ├── olist_joined_dataset.py         # Hàm build_joined_dataset() ghép nối 7 bảng dữ liệu thô
-    ├── preprocessing.py                # Class DataPreprocessor làm sạch dữ liệu
-    ├── rfm.py                          # Class RFMProcessor tính RFM, Capping, Log & Scaling
-    ├── clustering.py                   # Các hàm train/save K-Means, K-Medoids, FCM & hàm chấm điểm
-    └── visualization.py                # Class ClusterVisualizer & hàm merge_and_report_kmeans_fast()
+└── src/                              
+    ├── __init__.py                    
+    ├── config.py                     
+    ├── olist_joined_dataset.py        
+    ├── preprocessing.py               
+    ├── rfm.py                          
+    ├── clustering.py                  
+    └── visualization.py              
 ```
 
 ---
