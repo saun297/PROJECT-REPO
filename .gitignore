@@ -13,9 +13,6 @@ env/
 .env
 
 # Data & Large Files (không push data nặng lên Git)
-data/raw_data/*
-data/processed/*
-data/joined_data/*
 !data/**/.gitkeep
 
 # Models (nếu file .pkl quá lớn, nên ignore)
