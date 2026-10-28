@@ -25,7 +25,7 @@ import time
 from pathlib import Path
 
 # Dam bao thu muc goc nam trong Python path
-ROOT_DIR = Path(_file_).resolve().parent
+ROOT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT_DIR))
 
 # Import cac module trong src/
@@ -45,8 +45,11 @@ REPORTS_DIR          = ROOT_DIR / "reports"
 
 JOINED_CSV           = JOINED_DIR  / "olist_joined_dataset.csv"
 CLEANED_CSV          = PROCESSED_DIR / "olist_cleaned_dataset.csv"
+RFM_RAW_CSV          = PROCESSED_DIR / "rfm_raw.csv"
 RFM_SCALED_CSV       = PROCESSED_DIR / "rfm_features_scaled.csv"
-KMEANS_CLUSTERED_CSV = PROCESSED_DIR / "rfm_kmeans_clustered.csv"
+KMEANS_CLUSTERED_CSV   = PROCESSED_DIR / "rfm_kmeans_clustered.csv"
+KMEDOIDS_CLUSTERED_CSV = PROCESSED_DIR / "rfm_kmedoids_clustered.csv"
+FCM_CLUSTERED_CSV      = PROCESSED_DIR / "rfm_fcm_clustered.csv"
 
 KMEANS_MODEL_PATH    = MODELS_DIR / "kmeans_rfm_model.pkl"
 KMEDOIDS_MODEL_PATH  = MODELS_DIR / "kmedoids_rfm_model.pkl"
@@ -113,7 +116,7 @@ def step_rfm():
         df_clean["order_purchase_timestamp"], errors="coerce"
     )
     rfm_processor = RFMProcessor(df_clean)
-    rfm_processor.compute_rfm()
+    rfm_processor.compute_rfm(output_dir=str(PROCESSED_DIR))
     rfm_processor.preprocess_features()
     rfm_processor.save_processed_data(
         output_dir=str(PROCESSED_DIR),
@@ -130,8 +133,8 @@ def step_cluster():
     print("\n" + "=" * 60)
     print("  BUOC 4 - TRAIN MO HINH PHAN CUM (K-MEANS / K-MEDOIDS / FCM)")
     print("=" * 60)
-    if not RFM_SCALED_CSV.exists():
-        print("[!] Chua co file RFM. Tu dong chay Buoc 3...")
+    if not RFM_SCALED_CSV.exists() or not RFM_RAW_CSV.exists():
+        print("[!] Chua co file RFM day du. Tu dong chay Buoc 3...")
         step_rfm()
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
     data_path = str(RFM_SCALED_CSV)
@@ -155,6 +158,8 @@ def step_cluster():
         model_save_path=str(KMEDOIDS_MODEL_PATH),
         k=4,
     )
+    df_kmedoids.to_csv(KMEDOIDS_CLUSTERED_CSV, index=False)
+    print(f"     Da luu file K-Medoids tai: {KMEDOIDS_CLUSTERED_CSV}")
     print(f"     Thoi gian: {time.time() - t0:.2f}s")
 
     # 4c. Fuzzy C-Means
@@ -163,7 +168,7 @@ def step_cluster():
     _, df_fcm = train_and_save_fcm(
         data_path=data_path,
         model_save_path=str(FCM_MODEL_PATH),
-        output_csv_path=str(PROCESSED_DIR / "rfm_fcm_clustered.csv"),
+        output_csv_path=str(FCM_CLUSTERED_CSV),
         c=4,
     )
     print(f"     Thoi gian: {time.time() - t0:.2f}s")
@@ -179,12 +184,19 @@ def step_visualize():
     print("\n" + "=" * 60)
     print("  BUOC 5 - TRUC QUAN HOA KET QUA PHAN CUM")
     print("=" * 60)
-    if not KMEANS_CLUSTERED_CSV.exists() or not CLEANED_CSV.exists():
-        print("[!] Chua co file ket qua. Tu dong chay Buoc 4...")
+    if not CLEANED_CSV.exists():
+        print("[!] Chua co file cleaned dataset. Tu dong chay Buoc 2...")
+        step_preprocess()
+    if not RFM_RAW_CSV.exists() or not RFM_SCALED_CSV.exists():
+        print("[!] Chua co file RFM. Tu dong chay Buoc 3...")
+        step_rfm()
+    if not KMEANS_CLUSTERED_CSV.exists():
+        print("[!] Chua co file ket qua K-Means. Tu dong chay Buoc 4...")
         step_cluster()
 
     rfm_summary, business_summary, df_merged = merge_and_report_kmeans_fast(
         clustered_path=str(KMEANS_CLUSTERED_CSV),
+        rfm_raw_path=str(RFM_RAW_CSV),
         olist_cleaned_path=str(CLEANED_CSV),
         output_merged_csv=str(PROCESSED_DIR / "rfm_kmeans_merged_detail.csv"),
         tables_report_dir=str(REPORTS_DIR / "tables"),
@@ -194,9 +206,21 @@ def step_visualize():
     print("\nBang Business Summary theo Cum:")
     print(business_summary.to_string())
 
-    viz = ClusterVisualizer(df_merged, cluster_col="Cluster")
+    viz = ClusterVisualizer(
+        df_merged,
+        cluster_col="Cluster",
+        figures_dir=str(REPORTS_DIR / "figures"),
+    )
     print("\n[5b] Ve bieu do PCA, Snake Plot, Heatmap, Boxplot...")
-    viz.plot_rfm_overview()
+    centers = None
+    if KMEANS_MODEL_PATH.exists():
+        import joblib
+        try:
+            kmeans_model = joblib.load(KMEANS_MODEL_PATH)
+            centers = getattr(kmeans_model, "cluster_centers_", None)
+        except Exception:
+            centers = None
+    viz.plot_rfm_overview(centers=centers)
     print("\n[5c] Ve Radar Chart va phan bo dia ly...")
     viz.plot_business_insights()
     print("\n[5d] Ve Top 3 danh muc san pham theo cum...")
@@ -253,5 +277,5 @@ def main():
     print("=" * 60 + "\n")
 
 
-if _name_ == "_main_":
+if __name__ == "__main__":
     main()
