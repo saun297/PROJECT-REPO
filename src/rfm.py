@@ -21,6 +21,7 @@ class RFMProcessor:
     ):
         """Khởi tạo RFMProcessor với DataFrame sạch và các cấu hình."""
         self.df_clean = df_clean.copy()
+        self.df_clean["order_purchase_timestamp"] = pd.to_datetime(self.df_clean["order_purchase_timestamp"])
         self.features = features if features is not None else ["Recency", "Frequency", "Monetary"]
         self.monetary_quantile = monetary_quantile
         self.output_dir = Path(output_dir)
@@ -44,8 +45,8 @@ class RFMProcessor:
         plt.show()
         plt.close(fig)
 
-    def compute_rfm(self) -> pd.DataFrame:
-        """Tổng hợp dữ liệu thành 1 dòng / 1 customer_unique_id (tính R, F, M thô)."""
+    def compute_rfm(self, output_dir: str = None) -> pd.DataFrame:
+        """Tổng hợp dữ liệu thành 1 dòng / 1 customer_unique_id (tính R, F, M thô) và lưu file."""
         snapshot_date = self.df_clean["order_purchase_timestamp"].max() + pd.Timedelta(days=1)
 
         orders = (
@@ -66,6 +67,15 @@ class RFMProcessor:
         ).reset_index()
 
         print(f"Đã tính RFM thô cho {len(self.rfm_df):,} khách hàng duy nhất.")
+
+        # Tự động tạo thư mục và xuất file rfm_raw.csv nếu có truyền output_dir
+        if output_dir is not None:
+            out_path = Path(output_dir)
+            out_path.mkdir(parents=True, exist_ok=True) # Tạo thư mục data/processed nếu chưa có
+            save_file_path = out_path / "rfm_raw.csv"
+            self.rfm_df.to_csv(save_file_path, index=False, encoding="utf-8-sig")
+            print(f"Đã lưu dữ liệu RFM thô tại: {save_file_path.resolve()}")
+
         return self.rfm_df
 
     def cap_monetary(self, plot: bool = True) -> pd.DataFrame:
@@ -253,10 +263,10 @@ class RFMProcessor:
         output_dir: str = "data/processed",
         output_filename: str = "rfm_features_scaled.csv",
     ) -> None:
-        """Hàm lưu bảng RFM đã xử lý vào thư mục được chỉ định."""
+        """Hàm lưu bảng RFM đã scaled vào thư mục được chỉ định."""
         if self.df_final is None:
             raise ValueError(
-                "Vui lòng chạy hàm `.preprocess_features()` trước khi lưu dữ liệu!"
+                "Vui lòng chạy `.preprocess_features()` hoặc `.scale_features()` trước khi lưu dữ liệu!"
             )
 
         out_path = Path(output_dir)

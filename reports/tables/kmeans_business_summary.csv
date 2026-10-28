@@ -1,5 +1,5 @@
-Cluster,Recency_log_scaled,Frequency_log_scaled,Monetary_log_scaled,freight_value,review_score,customer_state,customer_city,category
-0,0.34,-0.18,0.92,31.6,4.04,SP,sao paulo,bed_bath_table
-1,-1.71,-0.18,-0.1,22.84,4.32,SP,sao paulo,health_beauty
-2,-0.08,5.69,0.92,22.89,4.21,SP,sao paulo,bed_bath_table
-3,0.42,-0.18,-0.73,15.95,4.17,SP,sao paulo,bed_bath_table
+Cluster,Recency,Frequency,Monetary,freight_value,review_score,customer_state,customer_city,category
+0,171.47,1.0,309.99,33.54,4.04,SP,sao paulo,watches_gifts
+1,426.29,1.0,121.86,20.0,4.22,SP,sao paulo,bed_bath_table
+2,220.29,2.11,308.59,22.89,4.21,SP,sao paulo,bed_bath_table
+3,149.25,1.0,67.38,16.01,4.19,SP,sao paulo,health_beauty

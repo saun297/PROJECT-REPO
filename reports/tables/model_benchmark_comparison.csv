@@ -1,0 +1,4 @@
+Thuật toán,Silhouette_Score (↑),Davies_Bouldin (↓),Calinski_Harabasz (↑),Thời gian train (giây),Đánh giá & Quyết định
+K-Means,0.3699,0.7808,71180.63,1.15,⭐ Mô hình Tốt nhất (Sản xuất chính)
+K-Medoids,0.2871,1.2822,25222.12,430.5,❌ Loại (Chạy quá chậm ~7 phút)
+Fuzzy C-Means,0.2832,1.2788,25892.23,2.45,🎯 Mô hình Bổ trợ (Lọc A/B Testing)
