@@ -20,6 +20,25 @@ except ImportError:
     display = print
 
 
+def _resolve_path(path: str) -> str:
+    """
+    Tự động xử lý đường dẫn tương đối tùy thuộc vào nơi gọi code 
+    (từ root dự án hoặc từ thư mục con như notebooks/ hay src/).
+    """
+    if os.path.exists(path):
+        return path
+    alt_path = os.path.join("..", path)
+    if os.path.exists(alt_path):
+        return alt_path
+    alt_strip = path.replace("../", "")
+    if os.path.exists(alt_strip):
+        return alt_strip
+    # Nếu chưa tạo thư mục, ưu tiên trỏ ra ngoài 1 cấp nếu đang ở trong notebooks/
+    if not os.path.exists(path) and os.path.basename(os.getcwd()) in ["notebooks", "src"]:
+        return alt_path
+    return path
+
+
 def _prepare_rfm_features(df: pd.DataFrame) -> list:
     """Đảm bảo các cột đặc trưng RFM log scaled tồn tại trong DataFrame."""
     feature_cols = ['Recency_log_scaled', 'Frequency_log_scaled', 'Monetary_log_scaled']
@@ -56,16 +75,14 @@ def evaluate_cluster_metrics(
     - Calinski-Harabasz (CH) Index
     - Davies-Bouldin (DB) Index
 
-    Vẽ biểu đồ 4 subplot trực quan và lưu vào reports/figures/ để người dùng
-    tự quan sát và khoanh vùng các ứng viên K tiềm năng.
+    Vẽ biểu đồ 4 subplot trực quan và lưu vào reports/figures/
     """
+    data_path = _resolve_path(data_path)
+    reports_dir = _resolve_path(reports_dir)
+    tables_dir = _resolve_path(tables_dir)
+
     if not os.path.exists(data_path):
-        # Fallback thử đường dẫn tương đối từ notebook
-        alt_path = os.path.join("..", data_path)
-        if os.path.exists(alt_path):
-            data_path = alt_path
-        else:
-            raise FileNotFoundError(f"Không tìm thấy file dữ liệu tại: {data_path}")
+        raise FileNotFoundError(f"Không tìm thấy file dữ liệu tại: {data_path}")
 
     os.makedirs(reports_dir, exist_ok=True)
     os.makedirs(tables_dir, exist_ok=True)
@@ -216,23 +233,19 @@ def compare_candidate_clusters(
     random_state: int = 42,
 ) -> dict:
     """
-    So sánh trực quan song song các ứng viên K do người dùng truyền vào:
-    - Bảng đối chiếu 4 chỉ số phân cụm giữa các ứng viên K.
-    - Biểu đồ tỷ trọng quy mô (% và số lượng khách hàng trong từng cụm).
-    - Biểu đồ Heatmap giá trị trung bình R, F, M song song dưới từng phương án K.
-    - Biểu đồ Boxplot & Snake Plot phân bố đặc trưng RFM cho từng phương án K.
+    So sánh trực quan song song các ứng viên K do người dùng truyền vào
     """
     if not k_candidates or not isinstance(k_candidates, (list, tuple)):
         raise ValueError(
             "Vui lòng truyền danh sách các ứng viên K cần so sánh (VD: k_candidates=[3, 4, 5])!"
         )
 
+    data_path = _resolve_path(data_path)
+    reports_dir = _resolve_path(reports_dir)
+    tables_dir = _resolve_path(tables_dir)
+
     if not os.path.exists(data_path):
-        alt_path = os.path.join("..", data_path)
-        if os.path.exists(alt_path):
-            data_path = alt_path
-        else:
-            raise FileNotFoundError(f"Không tìm thấy file dữ liệu tại: {data_path}")
+        raise FileNotFoundError(f"Không tìm thấy file dữ liệu tại: {data_path}")
 
     os.makedirs(reports_dir, exist_ok=True)
     os.makedirs(tables_dir, exist_ok=True)
